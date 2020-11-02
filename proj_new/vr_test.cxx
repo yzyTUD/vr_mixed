@@ -3,6 +3,7 @@
 #include <cgv/signal/rebind.h>
 #include <cgv/base/register.h>
 #include <cgv/math/ftransform.h>
+#include <cgv/math/ftransform.h>
 #include <cgv/utils/scan.h>
 #include <cgv/utils/options.h>
 #include <cgv/gui/dialog.h>
@@ -514,6 +515,12 @@ bool vr_test::init(cgv::render::context& ctx)
 	cgv::render::ref_box_renderer(ctx, 1);
 	cgv::render::ref_sphere_renderer(ctx, 1);
 	cgv::render::ref_rounded_cone_renderer(ctx, 1);
+
+	cube_prog.build_program(ctx, "color_cube.glpr", true);
+
+	tex_cube_prog.build_program(ctx, "tex_cube_prog.glpr");
+	tex_cube_tex.create_from_images(ctx, "C:/Users/yzhon/source/repos/vr_dataset/skybox/cm_{xp,xn,yp,yn,zp,zn}.jpg");
+
 	return true;
 }
 
@@ -646,7 +653,9 @@ void vr_test::init_frame(cgv::render::context& ctx)
 
 void vr_test::draw(cgv::render::context& ctx)
 {
-	if (MI.is_constructed()) {
+
+
+	/*if (MI.is_constructed()) {
 		dmat4 R;
 		mesh_orientation.put_homogeneous_matrix(R);
 		ctx.push_modelview_matrix();
@@ -657,6 +666,7 @@ void vr_test::draw(cgv::render::context& ctx)
 		MI.draw_all(ctx);
 		ctx.pop_modelview_matrix();
 	}
+	*/
 	if (vr_view_ptr) {
 		if ((!shared_texture && camera_tex.is_created()) || (shared_texture && camera_tex_id != -1)) {
 			if (vr_view_ptr->get_rendered_vr_kit() != 0 && vr_view_ptr->get_rendered_vr_kit() == vr_view_ptr->get_current_vr_kit()) {
@@ -780,70 +790,92 @@ void vr_test::draw(cgv::render::context& ctx)
 			}
 		}
 	}
-	cgv::render::box_renderer& renderer = cgv::render::ref_box_renderer(ctx);
+	//cgv::render::box_renderer& renderer = cgv::render::ref_box_renderer(ctx);
 
-	// draw dynamic boxes 
-	renderer.set_render_style(movable_style);
-	renderer.set_box_array(ctx, movable_boxes);
-	renderer.set_color_array(ctx, movable_box_colors);
-	renderer.set_translation_array(ctx, movable_box_translations);
-	renderer.set_rotation_array(ctx, movable_box_rotations);
-	if (renderer.validate_and_enable(ctx)) {
-		if (show_seethrough) {
-			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-			renderer.draw(ctx, 0, 3);
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			renderer.draw(ctx, 3, movable_boxes.size() - 3);
-		}
-		else
-			renderer.draw(ctx, 0, movable_boxes.size());
-	}
-	renderer.disable(ctx);
+	//// draw dynamic boxes 
+	//renderer.set_render_style(movable_style);
+	//renderer.set_box_array(ctx, movable_boxes);
+	//renderer.set_color_array(ctx, movable_box_colors);
+	//renderer.set_translation_array(ctx, movable_box_translations);
+	//renderer.set_rotation_array(ctx, movable_box_rotations);
 
-	// draw static boxes
-	renderer.set_render_style(style);
-	renderer.set_box_array(ctx, boxes);
-	renderer.set_color_array(ctx, box_colors);
-	renderer.render(ctx, 0, boxes.size());
+	//if (renderer.validate_and_enable(ctx)) {
+	//	if (show_seethrough) {
+	//		glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	//		renderer.draw(ctx, 0, 3);
+	//		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	//		renderer.draw(ctx, 3, movable_boxes.size() - 3);
+	//	}
+	//	else
+	//		renderer.draw(ctx, 0, movable_boxes.size());
+	//}
+	//renderer.disable(ctx);
+
+	//// draw static boxes
+	//renderer.set_render_style(style);
+	//renderer.set_box_array(ctx, boxes);
+	//renderer.set_color_array(ctx, box_colors);
+	//renderer.render(ctx, 0, boxes.size());
 
 
-	// draw intersection points
-	if (!intersection_points.empty()) {
-		auto& sr = cgv::render::ref_sphere_renderer(ctx);
-		sr.set_position_array(ctx, intersection_points);
-		sr.set_color_array(ctx, intersection_colors);
-		sr.set_render_style(srs);
-		sr.render(ctx, 0, intersection_points.size());
-	}
+	//// draw intersection points
+	//if (!intersection_points.empty()) {
+	//	auto& sr = cgv::render::ref_sphere_renderer(ctx);
+	//	sr.set_position_array(ctx, intersection_points);
+	//	sr.set_color_array(ctx, intersection_colors);
+	//	sr.set_render_style(srs);
+	//	sr.render(ctx, 0, intersection_points.size());
+	//}
 
-	// draw label
-	if (vr_view_ptr && label_tex.is_created()) {
-		cgv::render::shader_program& prog = ctx.ref_default_shader_program(true);
-		int pi = prog.get_position_index();
-		int ti = prog.get_texcoord_index();
-		vec3 p(0, 1.5f, 0);
-		vec3 y = label_upright ? vec3(0, 1.0f, 0) : normalize(vr_view_ptr->get_view_up_dir_of_kit());
-		vec3 x = normalize(cross(vec3(vr_view_ptr->get_view_dir_of_kit()), y));
-		float w = 0.5f, h = 0.5f;
-		std::vector<vec3> P;
-		std::vector<vec2> T;
-		P.push_back(p - 0.5f * w * x - 0.5f * h * y); T.push_back(vec2(0.0f, 0.0f));
-		P.push_back(p + 0.5f * w * x - 0.5f * h * y); T.push_back(vec2(1.0f, 0.0f));
-		P.push_back(p - 0.5f * w * x + 0.5f * h * y); T.push_back(vec2(0.0f, 1.0f));
-		P.push_back(p + 0.5f * w * x + 0.5f * h * y); T.push_back(vec2(1.0f, 1.0f));
-		cgv::render::attribute_array_binding::set_global_attribute_array(ctx, pi, P);
-		cgv::render::attribute_array_binding::enable_global_array(ctx, pi);
-		cgv::render::attribute_array_binding::set_global_attribute_array(ctx, ti, T);
-		cgv::render::attribute_array_binding::enable_global_array(ctx, ti);
-		prog.enable(ctx);
-		label_tex.enable(ctx);
-		ctx.set_color(rgb(1, 1, 1));
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, (GLsizei)P.size());
-		label_tex.disable(ctx);
-		prog.disable(ctx);
-		cgv::render::attribute_array_binding::disable_global_array(ctx, pi);
-		cgv::render::attribute_array_binding::disable_global_array(ctx, ti);
-	}
+	//// draw label
+	//if (vr_view_ptr && label_tex.is_created()) {
+	//	cgv::render::shader_program& prog = ctx.ref_default_shader_program(true);
+	//	int pi = prog.get_position_index();
+	//	int ti = prog.get_texcoord_index();
+	//	vec3 p(0, 1.5f, 0);
+	//	vec3 y = label_upright ? vec3(0, 1.0f, 0) : normalize(vr_view_ptr->get_view_up_dir_of_kit());
+	//	vec3 x = normalize(cross(vec3(vr_view_ptr->get_view_dir_of_kit()), y));
+	//	float w = 0.5f, h = 0.5f;
+	//	std::vector<vec3> P;
+	//	std::vector<vec2> T;
+	//	P.push_back(p - 0.5f * w * x - 0.5f * h * y); T.push_back(vec2(0.0f, 0.0f));
+	//	P.push_back(p + 0.5f * w * x - 0.5f * h * y); T.push_back(vec2(1.0f, 0.0f));
+	//	P.push_back(p - 0.5f * w * x + 0.5f * h * y); T.push_back(vec2(0.0f, 1.0f));
+	//	P.push_back(p + 0.5f * w * x + 0.5f * h * y); T.push_back(vec2(1.0f, 1.0f));
+	//	cgv::render::attribute_array_binding::set_global_attribute_array(ctx, pi, P);
+	//	cgv::render::attribute_array_binding::enable_global_array(ctx, pi);
+	//	cgv::render::attribute_array_binding::set_global_attribute_array(ctx, ti, T);
+	//	cgv::render::attribute_array_binding::enable_global_array(ctx, ti);
+	//	prog.enable(ctx);
+	//	label_tex.enable(ctx);
+	//	ctx.set_color(rgb(1, 1, 1));
+	//	glDrawArrays(GL_TRIANGLE_STRIP, 0, (GLsizei)P.size());
+	//	label_tex.disable(ctx);
+	//	prog.disable(ctx);
+	//	cgv::render::attribute_array_binding::disable_global_array(ctx, pi);
+	//	cgv::render::attribute_array_binding::disable_global_array(ctx, ti);
+	//}
+
+
+	// render a cube with custom shader 
+	//cube_prog.enable(ctx);
+	//	glEnable(GL_BLEND);
+	//		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//		//glBindVertexArray(cube_VAO);
+	//		//dmat4 R;
+	//		//dquat(vec3(0, 1, 0), 3.14 * (45.0f / 180.0f)).put_homogeneous_matrix(R); // tested on gui 
+	//		//ctx.mul_modelview_matrix(R);
+	//		ctx.tesselate_unit_cube(false, false); //_with_color
+	//		//glBindVertexArray(0);
+	//	glDisable(GL_BLEND);
+	//cube_prog.disable(ctx);
+
+	tex_cube_tex.enable(ctx, 1);
+		tex_cube_prog.enable(ctx);
+		tex_cube_prog.set_uniform(ctx, "tex_cube_tex", 1);
+			ctx.tesselate_unit_cube();
+		tex_cube_prog.disable(ctx);
+	tex_cube_tex.disable(ctx);
 }
 
 void vr_test::finish_draw(cgv::render::context& ctx)

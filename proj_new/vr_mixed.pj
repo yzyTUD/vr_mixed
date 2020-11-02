@@ -1,8 +1,8 @@
 @=
 projectType="application_plugin";
-projectName="vr_test";
+projectName="vr_mixed";
 //referenceDeps = 0;
-projectGUID="8FFA22FA-141A-4BC8-8731-5D1A29BFD1E5";
+projectGUID="475F4657-D47B-451A-BA62-93753DCBD3E6";
 addProjectDirs=[CGV_DIR."/plugins", CGV_DIR."/libs", CGV_DIR."/test"];
 addProjectDeps=["cgv_utils", "cgv_type", "cgv_data", "cgv_base", "cgv_math",
 				"cgv_media", "cgv_gui", "cgv_render", "cmi_io",

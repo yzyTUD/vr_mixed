@@ -60,6 +60,9 @@ protected:
 	bool label_upright;
 	float label_size;
 	rgb label_color;
+	cgv::render::shader_program cube_prog;
+	cgv::render::shader_program tex_cube_prog;
+	cgv::render::texture tex_cube_tex;
 
 private:
 	bool label_outofdate; // whether label texture is out of date
